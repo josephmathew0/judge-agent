@@ -25,3 +25,19 @@ def test_web_text_upload_runs():
     assert payload["origin_prediction"]["label"] in {"ai_generated", "human_generated"}
     assert isinstance(payload["virality_score"], int)
     assert "distribution_analysis" in payload
+
+
+def test_web_rejects_invalid_fps_sample():
+    client = TestClient(app)
+
+    files = {"file": ("sample.txt", b"test")}
+    data = {
+        "content_type": "video",
+        "fps_sample": "0",
+        "max_frames": "60",
+        "debug": "false",
+    }
+
+    resp = client.post("/judge", files=files, data=data)
+    assert resp.status_code == 400
+    assert "fps_sample must be greater than 0" in resp.json()["error"]

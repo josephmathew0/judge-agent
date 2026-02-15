@@ -408,12 +408,12 @@
 
             <div class="field">
               <label for="fps">Frame sample rate (fps)</label>
-              <input id="fps" type="number" step="0.5" value="1.0" />
+              <input id="fps" type="number" step="0.5" min="0.1" value="1.0" />
             </div>
 
             <div class="field">
               <label for="maxFrames">Max frames</label>
-              <input id="maxFrames" type="number" step="1" value="60" />
+              <input id="maxFrames" type="number" step="1" min="1" value="60" />
             </div>
           </div>
 
@@ -649,13 +649,26 @@
         return;
       }
 
+      const fpsValue = Number(fps.value);
+      const maxFramesValue = Number(maxFrames.value);
+      if (!Number.isFinite(fpsValue) || fpsValue <= 0){
+        showError("Frame sample rate (fps) must be a number greater than 0.");
+        setStatus("Awaiting input");
+        return;
+      }
+      if (!Number.isFinite(maxFramesValue) || !Number.isInteger(maxFramesValue) || maxFramesValue <= 0){
+        showError("Max frames must be a whole number greater than 0.");
+        setStatus("Awaiting input");
+        return;
+      }
+
       setStatus("Running…");
 
       const fd = new FormData();
       fd.append("file", file);
       fd.append("content_type", contentType.value);
-      fd.append("fps_sample", fps.value);
-      fd.append("max_frames", maxFrames.value);
+      fd.append("fps_sample", String(fpsValue));
+      fd.append("max_frames", String(maxFramesValue));
       fd.append("debug", debug.checked ? "true" : "false");
 
       const tr = transcriptInput.files && transcriptInput.files[0];
@@ -665,10 +678,16 @@
 
       try{
         const resp = await fetch("/judge", { method: "POST", body: fd });
-        const data = await resp.json();
+        const raw = await resp.text();
+        let data = {};
+        try{
+          data = raw ? JSON.parse(raw) : {};
+        } catch (_) {
+          data = { error: raw || "Non-JSON response from server." };
+        }
 
         if (!resp.ok){
-          showError(data && data.error ? data.error : "Request failed.");
+          showError(data && data.error ? data.error : `Request failed (HTTP ${resp.status}).`);
           setStatus("Error");
           return;
         }
@@ -699,7 +718,7 @@
 
         setStatus("Complete");
       } catch (e){
-        showError("Network or server error. Make sure the FastAPI server is running.");
+        showError("Network error. Make sure the FastAPI server is running.");
         setStatus("Error");
       }
     });

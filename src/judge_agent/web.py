@@ -29,35 +29,43 @@ async def judge_endpoint(
     max_frames: int = Form(60),
     debug: bool = Form(False),
 ):
+    if fps_sample <= 0:
+        return JSONResponse({"error": "fps_sample must be greater than 0."}, status_code=400)
+    if max_frames <= 0:
+        return JSONResponse({"error": "max_frames must be greater than 0."}, status_code=400)
+
     # Save uploads to temp files
-    with tempfile.TemporaryDirectory() as td:
-        td_path = Path(td)
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
 
-        in_name = Path(file.filename or "input.bin").name
-        in_path = td_path / in_name
-        in_path.write_bytes(await file.read())
+            in_name = Path(file.filename or "input.bin").name
+            in_path = td_path / in_name
+            in_path.write_bytes(await file.read())
 
-        transcript_path = None
-        if transcript is not None:
-            tr_name = Path(transcript.filename or "transcript.txt").name
-            transcript_path = td_path / tr_name
-            transcript_path.write_bytes(await transcript.read())
+            transcript_path = None
+            if transcript is not None:
+                tr_name = Path(transcript.filename or "transcript.txt").name
+                transcript_path = td_path / tr_name
+                transcript_path.write_bytes(await transcript.read())
 
-        if content_type == "text":
-            text = in_path.read_text(encoding="utf-8", errors="ignore")
-            out = judge(text=text, include_debug=debug)
-        elif content_type == "video":
-            out = judge(
-                video_path=str(in_path),
-                transcript_path=str(transcript_path) if transcript_path else None,
-                fps_sample=float(fps_sample),
-                max_frames=int(max_frames),
-                include_debug=debug,
-            )
-        else:
-            return JSONResponse({"error": "content_type must be 'text' or 'video'."}, status_code=400)
+            if content_type == "text":
+                text = in_path.read_text(encoding="utf-8", errors="ignore")
+                out = judge(text=text, include_debug=debug)
+            elif content_type == "video":
+                out = judge(
+                    video_path=str(in_path),
+                    transcript_path=str(transcript_path) if transcript_path else None,
+                    fps_sample=float(fps_sample),
+                    max_frames=int(max_frames),
+                    include_debug=debug,
+                )
+            else:
+                return JSONResponse({"error": "content_type must be 'text' or 'video'."}, status_code=400)
 
-        return JSONResponse(out.model_dump())
+            return JSONResponse(out.model_dump())
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
 
 def main():
     import uvicorn

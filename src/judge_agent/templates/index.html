@@ -607,7 +607,14 @@
 
     resetBtn.addEventListener("click", resetUI);
 
-    drop.addEventListener("click", () => fileInput.click());
+    drop.addEventListener("click", (e) => {
+      if (e.target === fileInput) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
 
     drop.addEventListener("dragover", (e) => {
       e.preventDefault();

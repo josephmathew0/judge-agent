@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Judge Agent</title>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.65);
+      --muted2: rgba(255,255,255,0.45);
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --accent: #60a5fa;
+      --accent2: #a78bfa;
+      --shadow: 0 14px 50px rgba(0,0,0,0.35);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(900px 600px at 15% 10%, rgba(96,165,250,0.18), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(167,139,250,0.18), transparent 60%),
+        radial-gradient(1100px 800px at 55% 110%, rgba(34,197,94,0.10), transparent 60%),
+        var(--bg);
+      min-height:100vh;
+    }
+
+    a{ color: var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    .topbar{
+      position: sticky;
+      top:0;
+      z-index:10;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(11,16,32,0.92), rgba(11,16,32,0.65));
+      border-bottom: 1px solid var(--stroke);
+    }
+    .topbar-inner{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .logo{
+      width:34px;height:34px;border-radius:10px;
+      background: linear-gradient(135deg, rgba(96,165,250,1), rgba(167,139,250,1));
+      box-shadow: 0 10px 30px rgba(96,165,250,0.22);
+    }
+    .subtitle{
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 13px;
+      margin-left: 2px;
+    }
+    .pill{
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.03);
+      padding: 8px 10px;
+      border-radius: 999px;
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin: 0 auto;
+      padding: 26px 18px 50px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 16px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(to bottom, rgba(255,255,255,0.07), rgba(255,255,255,0.045));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card-h{
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .card-h h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+    .card-b{ padding: 16px; }
+
+    .muted{ color: var(--muted); }
+    .small{ font-size: 13px; }
+
+    .drop{
+      border: 1px dashed rgba(255,255,255,0.25);
+      border-radius: 14px;
+      padding: 18px;
+      text-align:center;
+      background: rgba(255,255,255,0.03);
+      transition: 150ms ease;
+    }
+    .drop.dragover{
+      border-color: rgba(96,165,250,0.9);
+      background: rgba(96,165,250,0.08);
+    }
+    .drop strong{ display:block; margin-bottom: 6px; }
+    .file-meta{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.16);
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      flex-wrap:wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .file-meta b{ color: var(--text); font-weight: 600; }
+
+    input[type="file"]{ color: var(--muted); }
+    .controls{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 620px){
+      .controls{ grid-template-columns: 1fr; }
+    }
+    .field label{
+      display:block;
+      margin: 0 0 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .field select, .field input[type="number"], .field input[type="text"]{
+      width:100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.20);
+      color: var(--text);
+      outline:none;
+    }
+    .field select:focus, .field input:focus{
+      border-color: rgba(96,165,250,0.7);
+      box-shadow: 0 0 0 4px rgba(96,165,250,0.10);
+    }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top: 12px;
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+      transition: 120ms ease;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.10); }
+    .btn:active{ transform: translateY(0px); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(96,165,250,0.95), rgba(167,139,250,0.95));
+      border-color: transparent;
+      color: #0b1020;
+    }
+    .btn.primary:hover{ filter: brightness(1.02); }
+
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      user-select:none;
+    }
+    .toggle input{ transform: translateY(1px); }
+
+    /* Results */
+    .kpis{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .kpi{
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.16);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .kpi .label{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .kpi .value{
+      font-size: 18px;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .badge{
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .badge.good{ border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.10); color: rgba(187, 255, 212, 0.95); }
+    .badge.warn{ border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.10); color: rgba(255, 229, 179, 0.95); }
+    .badge.bad{  border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.10); color: rgba(255, 203, 203, 0.95); }
+
+    .bar{
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow:hidden;
+      margin-top: 10px;
+    }
+    .bar > div{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(96,165,250,0.95), rgba(167,139,250,0.95));
+      border-radius: 999px;
+      transition: width 220ms ease;
+    }
+
+    .section{
+      margin-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 14px;
+    }
+
+    .aud{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .aud-item{
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.16);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .aud-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+    .aud-item b{ font-weight: 750; }
+    .aud-item .why{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .aud-item .mini{
+      color: var(--muted2);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    details{
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.16);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    details summary{
+      cursor:pointer;
+      color: var(--text);
+      font-weight: 650;
+      list-style:none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    pre{
+      margin: 10px 0 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.88);
+      overflow:auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .footer{
+      margin-top: 16px;
+      color: var(--muted2);
+      font-size: 12px;
+      text-align:center;
+    }
+
+    .error{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.10);
+      color: rgba(255, 210, 210, 0.95);
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <div>Judge Agent</div>
+          <div class="subtitle">AI vs Human · Virality · Audience fit</div>
+        </div>
+      </div>
+      <div class="pill">Local demo UI · FastAPI</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT: Input -->
+      <div class="card">
+        <div class="card-h">
+          <h2>Input</h2>
+          <span class="badge">Upload text or video</span>
+        </div>
+        <div class="card-b">
+          <div id="drop" class="drop">
+            <strong>Drag & drop a file</strong>
+            <div class="muted small">or click to select (TXT, MP4, MOV, etc.)</div>
+            <div style="margin-top:12px;">
+              <input id="file" type="file" />
+            </div>
+            <div id="fileMeta" class="file-meta" style="display:none;">
+              <div><b id="fileName"></b></div>
+              <div><span id="fileSize"></span></div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="field">
+              <label for="contentType">Content type</label>
+              <select id="contentType">
+                <option value="text">Text</option>
+                <option value="video">Video</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="transcript">Transcript (optional, .txt)</label>
+              <input id="transcript" type="file" />
+            </div>
+
+            <div class="field">
+              <label for="fps">Frame sample rate (fps)</label>
+              <input id="fps" type="number" step="0.5" value="1.0" />
+            </div>
+
+            <div class="field">
+              <label for="maxFrames">Max frames</label>
+              <input id="maxFrames" type="number" step="1" value="60" />
+            </div>
+          </div>
+
+          <div class="row">
+            <label class="toggle">
+              <input id="debug" type="checkbox" />
+              Include debug features
+            </label>
+
+            <button id="run" class="btn primary">Run Judge</button>
+            <button id="reset" class="btn">Reset</button>
+          </div>
+
+          <div id="error" class="error"></div>
+
+          <div class="footer">
+            Tip: For video, installing <code>ffmpeg</code> + <code>ffprobe</code> improves metadata and audio detection.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Output -->
+      <div class="card">
+        <div class="card-h">
+          <h2>Results</h2>
+          <span id="statusBadge" class="badge">Awaiting input</span>
+        </div>
+        <div class="card-b">
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Origin prediction</div>
+              <div class="value">
+                <span id="originLabel">—</span>
+                <span id="originBadge" class="badge">—</span>
+              </div>
+              <div class="bar"><div id="originBar"></div></div>
+              <div class="muted small" style="margin-top:8px;">Confidence</div>
+            </div>
+
+            <div class="kpi">
+              <div class="label">Virality score</div>
+              <div class="value">
+                <span id="viralityScore">—</span>
+                <span id="viralBadge" class="badge">—</span>
+              </div>
+              <div class="bar"><div id="viralBar"></div></div>
+              <div class="muted small" style="margin-top:8px;">0 (low) → 100 (high)</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="muted small" style="margin-bottom:10px;">Distribution analysis</div>
+            <div id="audiences" class="aud"></div>
+          </div>
+
+          <div class="section">
+            <details>
+              <summary>Explanations</summary>
+              <pre id="explanations">{}</pre>
+            </details>
+          </div>
+
+          <div class="section">
+            <details>
+              <summary>Raw JSON</summary>
+              <pre id="raw">{}</pre>
+            </details>
+          </div>
+
+          <div class="section">
+            <details>
+              <summary>Debug features</summary>
+              <pre id="debugOut">{}</pre>
+            </details>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file");
+    const transcriptInput = document.getElementById("transcript");
+    const contentType = document.getElementById("contentType");
+    const fps = document.getElementById("fps");
+    const maxFrames = document.getElementById("maxFrames");
+    const debug = document.getElementById("debug");
+    const runBtn = document.getElementById("run");
+    const resetBtn = document.getElementById("reset");
+
+    const statusBadge = document.getElementById("statusBadge");
+    const errorBox = document.getElementById("error");
+
+    const fileMeta = document.getElementById("fileMeta");
+    const fileName = document.getElementById("fileName");
+    const fileSize = document.getElementById("fileSize");
+
+    const originLabel = document.getElementById("originLabel");
+    const originBadge = document.getElementById("originBadge");
+    const originBar = document.getElementById("originBar");
+
+    const viralityScore = document.getElementById("viralityScore");
+    const viralBadge = document.getElementById("viralBadge");
+    const viralBar = document.getElementById("viralBar");
+
+    const audiencesEl = document.getElementById("audiences");
+    const explanationsEl = document.getElementById("explanations");
+    const rawEl = document.getElementById("raw");
+    const debugEl = document.getElementById("debugOut");
+
+    function bytesToSize(bytes){
+      if (!bytes && bytes !== 0) return "";
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      if (bytes === 0) return '0 B';
+      const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
+      return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+    }
+
+    function setStatus(text){
+      statusBadge.textContent = text;
+    }
+
+    function showError(msg){
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+    }
+
+    function clearError(){
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    function setBadge(el, kind, text){
+      el.className = "badge " + (kind || "");
+      el.textContent = text;
+    }
+
+    function viralityKind(score){
+      if (score >= 70) return ["good", "High"];
+      if (score >= 45) return ["warn", "Medium"];
+      return ["bad", "Low"];
+    }
+
+    function originKind(label){
+      if (label === "ai_generated") return ["warn", "AI-generated"];
+      if (label === "human_generated") return ["good", "Human-generated"];
+      return ["", "—"];
+    }
+
+    function renderAudiences(list){
+      audiencesEl.innerHTML = "";
+      if (!list || !list.length){
+        audiencesEl.innerHTML = `<div class="muted small">No audience segments returned.</div>`;
+        return;
+      }
+      for (const item of list){
+        const pct = Math.round((item.likelihood || 0) * 100);
+        const div = document.createElement("div");
+        div.className = "aud-item";
+        div.innerHTML = `
+          <div class="aud-top">
+            <div><b>${item.segment}</b></div>
+            <div class="badge">${pct}%</div>
+          </div>
+          <div class="why">${item.why || ""}</div>
+          <div class="mini">Likelihood is a normalized heuristic score.</div>
+        `;
+        audiencesEl.appendChild(div);
+      }
+    }
+
+    function resetUI(){
+      fileInput.value = "";
+      transcriptInput.value = "";
+      fileMeta.style.display = "none";
+      originLabel.textContent = "—";
+      viralityScore.textContent = "—";
+      originBar.style.width = "0%";
+      viralBar.style.width = "0%";
+      setBadge(originBadge, "", "—");
+      setBadge(viralBadge, "", "—");
+      renderAudiences([]);
+      explanationsEl.textContent = "{}";
+      rawEl.textContent = "{}";
+      debugEl.textContent = "{}";
+      setStatus("Awaiting input");
+      clearError();
+    }
+
+    resetBtn.addEventListener("click", resetUI);
+
+    drop.addEventListener("click", () => fileInput.click());
+
+    drop.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      drop.classList.add("dragover");
+    });
+
+    drop.addEventListener("dragleave", () => {
+      drop.classList.remove("dragover");
+    });
+
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("dragover");
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        updateFileMeta();
+      }
+    });
+
+    fileInput.addEventListener("change", updateFileMeta);
+
+    function updateFileMeta(){
+      const f = fileInput.files && fileInput.files[0];
+      if (!f){
+        fileMeta.style.display = "none";
+        return;
+      }
+      fileMeta.style.display = "flex";
+      fileName.textContent = f.name;
+      fileSize.textContent = bytesToSize(f.size);
+    }
+
+    runBtn.addEventListener("click", async () => {
+      clearError();
+
+      const file = fileInput.files && fileInput.files[0];
+      if (!file){
+        showError("Please select a file first (drag & drop or click to select).");
+        return;
+      }
+
+      setStatus("Running…");
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("content_type", contentType.value);
+      fd.append("fps_sample", fps.value);
+      fd.append("max_frames", maxFrames.value);
+      fd.append("debug", debug.checked ? "true" : "false");
+
+      const tr = transcriptInput.files && transcriptInput.files[0];
+      if (tr){
+        fd.append("transcript", tr);
+      }
+
+      try{
+        const resp = await fetch("/judge", { method: "POST", body: fd });
+        const data = await resp.json();
+
+        if (!resp.ok){
+          showError(data && data.error ? data.error : "Request failed.");
+          setStatus("Error");
+          return;
+        }
+
+        // Origin
+        const oLabel = data?.origin_prediction?.label || "—";
+        const oConf = data?.origin_prediction?.confidence ?? 0;
+        originLabel.textContent = (oLabel === "ai_generated") ? "AI-generated" :
+                                  (oLabel === "human_generated") ? "Human-generated" : "—";
+        const [okind, otext] = originKind(oLabel);
+        setBadge(originBadge, okind, `${Math.round(oConf * 100)}%`);
+        originBar.style.width = `${Math.round(oConf * 100)}%`;
+
+        // Virality
+        const v = data?.virality_score ?? 0;
+        viralityScore.textContent = `${v}`;
+        const [vkind, vtext] = viralityKind(v);
+        setBadge(viralBadge, vkind, vtext);
+        viralBar.style.width = `${Math.round(v)}%`;
+
+        // Audiences + explanations
+        renderAudiences(data?.distribution_analysis || []);
+        explanationsEl.textContent = JSON.stringify(data?.explanations || {}, null, 2);
+
+        // Raw + Debug
+        rawEl.textContent = JSON.stringify(data, null, 2);
+        debugEl.textContent = JSON.stringify(data?.debug || {}, null, 2);
+
+        setStatus("Complete");
+      } catch (e){
+        showError("Network or server error. Make sure the FastAPI server is running.");
+        setStatus("Error");
+      }
+    });
+
+    // init
+    resetUI();
+  </script>
+</body>
+</html>

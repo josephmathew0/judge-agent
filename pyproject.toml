@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "judge-agent"
+version = "0.1.0"
+description = "Judge agent to classify AI vs human content, virality, and audience distribution."
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.6",
+  "typer>=0.12",
+  "rich>=13.7",
+  "numpy>=1.26",
+  "opencv-python>=4.9",
+  "ffmpeg-python>=0.2.0",
+  "python-dotenv>=1.0",
+  "scikit-learn>=1.4",
+  "fastapi>=0.110",
+  "uvicorn>=0.27",
+  "python-multipart>=0.0.9",
+  "jinja2>=3.1"
+]
+
+[project.scripts]
+judge-agent = "judge_agent.cli:app"
+judge-agent-web = "judge_agent.web:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+judge_agent = ["templates/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
